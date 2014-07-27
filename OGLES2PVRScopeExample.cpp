@@ -36,6 +36,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <jni.h>
+//
+#include <android/log.h>
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO , "PVRScope", __VA_ARGS__)
 #include "PVRScopeStats.h"
 
 // Step 1. Define a function to initialise PVRScopeStats
@@ -102,7 +106,6 @@ double parseCPU(char cpuLine[])
 	prev_total = total;
 	prev_idle = idle;
 	free(tok);
-	
 	//printf("parse CPU util = %f\n",diff_util);
 	
 	
@@ -115,13 +118,42 @@ void *callEvent(void *ptr){
 	system(aut2);
 }
 
-
-
-
-
 //void *method(void *ptr)
 void method(int numTest, int numTime)
-{
+{		
+		JNIEnv* env;
+		jclass clazz;
+		jobject obj;
+		jobject result;
+		jmethodID id;
+				
+		//jclass displayClass = env->FindClass("android/view/Display");
+		//clazz = env->GetObjectClass(obj); //com/example/trains4/MainActivity");
+		//clazz = env->FindClass("android/net/wifi/WifiInfo");
+		
+		/*if (clazz == 0) 
+		{
+			fprintf(stderr, "Can't locate the class. Exiting...\n");
+			//exit(-1);
+		}
+		else
+		{
+			printf("success finding class\n");
+		}
+		
+		id = env->GetMethodID(clazz, "getWiFiLinkSpeed", "()I");
+		
+		if(id == 0)
+			printf("error\n");
+		else
+		{		
+			jstring jstr = env->NewStringUTF("This comes from jni.");
+			
+			result = env->CallObjectMethod(obj, id, jstr);
+			const char* str = env->GetStringUTFChars((jstring) result, NULL); 
+			printf("%s\n", str);
+		}
+		*/
 		
 		char buffer[2048];
 		char header[1024];
@@ -155,7 +187,7 @@ void method(int numTest, int numTime)
 		// Step 2. Initialise PVRScopeStat
 		if (PSInit(&psData, &psCounters, &sReading, &uCounterNum)){
 			//LOGI("PVRScope up and running.");
-			printf("PVRScore up and running...\n");
+			//printf("PVRScore up and running...\n");
 		}else{
 			//LOGE("Error initializing PVRScope.");
 			printf("Error initializing PVRScope...\n");
@@ -190,7 +222,9 @@ void method(int numTest, int numTime)
 				{
 						uActiveGroup = 0xffffffff;
 				}
+				
 				++index;
+				
 				if (index < sampleRate) 
 				{
 					// Sample the counters every 10ms. Don't read or output it.
@@ -209,7 +243,7 @@ void method(int numTest, int numTime)
 					{
 					
 						//printf("Start uCounterNum = %d %lu \n",uCounterNum, time_in_mill);
-						if(j==1){
+						/*if(j==1){
 							sprintf(aut,"echo %s > /sys/class/backlight/s5p_bl/brightness","0");
 							system(aut);
 						}
@@ -220,11 +254,12 @@ void method(int numTest, int numTime)
 						else if(j==10){
 			
 							pthread_t thread1;
-							const char *message1 = "Thread 1";
 							
+							const char *message1 = "Thread 1";
 							int iret1;
+							
 							iret1 = pthread_create(&thread1, NULL, callEvent, (void*) message1);
-						}
+						}*/
 							
 						//Read CPU util every 1 second
 						if((fp = fopen("/proc/stat","r")) != NULL) {	
@@ -360,7 +395,9 @@ void method(int numTest, int numTime)
 						bool isFirst = true;
 						for(int i = 0; i < uCounterNum; ++i)
 						{					
-										
+							
+							printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
+							
 							if(i < sReading.nValueCnt)
 							{										
 								if ((strcmp(psCounters[i].pszName, "Frame time") == 0) || (strcmp(psCounters[i].pszName, "Frames per second (FPS)") == 0) || (strcmp(psCounters[i].pszName, "GPU task load: 3D core") == 0) || 
@@ -387,7 +424,7 @@ void method(int numTest, int numTime)
 									memset(&header[0], 0, sizeof(header));
 									//strcat(sample[j]," \n");
 									//printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
-									printf("%s \n",sample[j]);
+									//printf("%s \n",sample[j]);
 								}
 								
 							}

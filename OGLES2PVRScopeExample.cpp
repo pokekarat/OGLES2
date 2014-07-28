@@ -114,7 +114,7 @@ double parseCPU(char cpuLine[])
 
 void *callEvent(void *ptr){
 	char aut2[1024];
-	sprintf(aut2,"sh /data/local/tmp/events.sh");
+	sprintf(aut2,"sh /data/local/tmp/firefox_cnn_events.sh");
 	system(aut2);
 }
 
@@ -243,7 +243,7 @@ void method(int numTest, int numTime)
 					{
 					
 						//printf("Start uCounterNum = %d %lu \n",uCounterNum, time_in_mill);
-						/*if(j==1){
+						if(j==1){
 							sprintf(aut,"echo %s > /sys/class/backlight/s5p_bl/brightness","0");
 							system(aut);
 						}
@@ -259,7 +259,7 @@ void method(int numTest, int numTime)
 							int iret1;
 							
 							iret1 = pthread_create(&thread1, NULL, callEvent, (void*) message1);
-						}*/
+						}
 							
 						//Read CPU util every 1 second
 						if((fp = fopen("/proc/stat","r")) != NULL) {	
@@ -390,6 +390,20 @@ void method(int numTest, int numTime)
 							prev_rx = cur;
 							
 						}
+						
+						if((fp = fopen("/sys/class/net/wlan0/operstate","r")) != NULL) {
+						
+							fgets(buffer,sizeof buffer, fp);
+							
+							sprintf(header,"\n%s","state=");
+							strcat(header,buffer);				
+							strcat(sample[j],header);
+						
+							memset(&buffer[0], 0, sizeof(buffer));
+							memset(&header[0], 0, sizeof(header));
+							printf("%s \n",sample[j]);
+							
+						}
 					
 						// Check for all the counters in the system if the counter has a value on the given active group and ouptut it.
 						bool isFirst = true;
@@ -411,7 +425,7 @@ void method(int numTest, int numTime)
 									if(isFirst)
 									{
 										isFirst = false;
-										sprintf(header,"\n_GPU_\n%s=",psCounters[i].pszName);
+										sprintf(header,"_GPU_\n%s=",psCounters[i].pszName);
 									}
 									else
 										sprintf(header,"%s=",psCounters[i].pszName);
@@ -444,8 +458,8 @@ void method(int numTest, int numTime)
 				//usleep(1000000);
 		}
 		
-		sprintf(aut,"sh /data/local/tmp/stopEvents.sh");
-		system(aut);
+		//sprintf(aut,"sh /data/local/tmp/stopEvents.sh");
+		//system(aut);
 		
 		//fclose(fp);
 			

@@ -73,6 +73,52 @@ double prev_idle_entry = 0;
 double prev_tx = 0;
 double prev_rx = 0;
 
+
+double parseMem(char memLine[])
+{
+
+	double ret = 0;
+	double total = 0;
+	double free = 0;
+	double buffer = 0;
+	
+	char *tok = NULL;	
+	tok = strtok(memLine, " ");
+	
+	int count = 0;
+
+	while(tok)
+	{
+		if(count == 1){
+			total = atof(tok);
+			//printf("total = %f\n",total);
+		}
+		else if(count == 3){
+			free = atof(tok);
+			//printf("free = %f\n",free);
+		}
+		else if(count == 5){
+			buffer = atof(tok);
+			//printf("buffer = %f\n",buffer);
+		}
+		
+		//printf("token = %f \n",atof(tok));
+		
+		
+		tok = strtok(NULL, " ");
+		++count;
+	}
+	
+	ret = (total - (free+buffer))/total;
+	ret = ret * 100;
+		
+	//printf("count = %d\n", count);
+	//free(tok);
+	
+	return ret;
+
+}
+
 double parseCPU(char cpuLine[])
 {
 	//printf("prev total = %f\n",prev_total);
@@ -114,7 +160,7 @@ double parseCPU(char cpuLine[])
 
 void *callEvent(void *ptr){
 	char aut2[1024];
-	sprintf(aut2,"sh /data/local/tmp/firefox_cnn_events.sh");
+	sprintf(aut2,"sh /data/local/tmp/firefox_yt_events.sh");
 	system(aut2);
 }
 
@@ -170,7 +216,7 @@ void method(int numTest, int numTime)
 		}
 		*/
 		
-		printf("test passed\n");
+		printf("test passed2\n");
 		
 		SPVRScopeImplData *psData;
 		
@@ -187,7 +233,7 @@ void method(int numTest, int numTime)
 		// Step 2. Initialise PVRScopeStat
 		if (PSInit(&psData, &psCounters, &sReading, &uCounterNum)){
 			//LOGI("PVRScope up and running.");
-			//printf("PVRScore up and running...\n");
+			printf("PVRScore up and running...\n");
 		}else{
 			//LOGE("Error initializing PVRScope.");
 			printf("Error initializing PVRScope...\n");
@@ -196,10 +242,10 @@ void method(int numTest, int numTime)
 		//Print each and every counter (and its group)		
 		//LOGI("Find below the list of counters:");
 		
-		/*for(int i = 0; i < uCounterNum; ++i)
+		for(int i = 0; i < uCounterNum; ++i)
 		{
 			printf(" Group %d %s\n", psCounters[i].nGroup, psCounters[i].pszName);
-		}*/
+		}
 		
 		// Step 3. Set the active group to 0
 		bActiveGroupChanged = true;
@@ -296,6 +342,7 @@ void method(int numTest, int numTime)
 						
 						//Read CPU idle time
 						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpuidle/state0/time","r")) != NULL) {	
+						
 							fgets(buffer,sizeof buffer, fp);
 							
 							sprintf(header,"%s","idle_time=");
@@ -333,6 +380,24 @@ void method(int numTest, int numTime)
 							prev_idle_entry = cur;
 						}
 						
+						//Read memory usage
+						if((fp = popen("free -m", "r")) != NULL){
+						
+							fgets(buffer, sizeof buffer, fp);
+							fgets(buffer, sizeof buffer, fp);
+							//fprintf(stdout, "-%s=\n",buffer);
+							
+							sprintf(header,"\n%s","mem_util=");
+							double mem_util = parseMem(buffer);
+							char output[50];
+							snprintf(output,50,"%.2f",mem_util);
+							strcat(header,output);
+							strcat(sample[j],header);
+					
+							memset(&buffer[0], 0, sizeof(buffer));
+							memset(&header[0], 0, sizeof(header));
+						}
+						
 						//Read bright
 						if((fp = fopen("/sys/class/backlight/s5p_bl/brightness","r")) != NULL) {	
 							fgets(buffer,sizeof buffer, fp);
@@ -343,7 +408,7 @@ void method(int numTest, int numTime)
 						
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
-							printf("%s \n",sample[j]);
+							//printf("%s \n",sample[j]);
 						}
 						
 						//wifi				
@@ -363,11 +428,10 @@ void method(int numTest, int numTime)
 						
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
-							printf("%s \n",sample[j]);
+							//printf("%s \n",sample[j]);
 							
 							prev_tx = cur;
 						}
-						
 						
 						if((fp = fopen("/sys/class/net/wlan0/statistics/rx_packets","r")) != NULL) {
 						
@@ -385,7 +449,7 @@ void method(int numTest, int numTime)
 						
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
-							printf("%s \n",sample[j]);
+							//printf("%s \n",sample[j]);
 							
 							prev_rx = cur;
 							
@@ -401,16 +465,16 @@ void method(int numTest, int numTime)
 						
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
-							printf("%s \n",sample[j]);
+							//printf("%s \n",sample[j]);
 							
 						}
-					
+						
 						// Check for all the counters in the system if the counter has a value on the given active group and ouptut it.
 						bool isFirst = true;
 						for(int i = 0; i < uCounterNum; ++i)
 						{					
 							
-							printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
+							//printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
 							
 							if(i < sReading.nValueCnt)
 							{										
@@ -439,18 +503,16 @@ void method(int numTest, int numTime)
 									//strcat(sample[j]," \n");
 									//printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
 									//printf("%s \n",sample[j]);
-								}
-								
+								}			
 							}
-							
 						}
+					
 						isFirst = true;
 						//printf("End\n");
 					}
 					
 					//printf("Data >> %s \n",sample[j]);
 					++j;
-					
 				}
 				
 				//Poll for the counters once a second

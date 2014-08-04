@@ -72,7 +72,7 @@ double prev_idle_time = 0;
 double prev_idle_entry = 0;
 double prev_tx = 0;
 double prev_rx = 0;
-
+char **sample;
 
 double parseMem(char memLine[])
 {
@@ -207,7 +207,12 @@ void method(int numTest, int numTime)
 		
 		int numCol = 1024;
 		
-		char sample[numTime * 25][numCol];
+		sample = (char **)malloc(numTime * sizeof(char *));
+		
+		int c=0;
+		for(c=0; c<numTime; c++)
+			sample[c] = (char *) malloc(numCol * sizeof(char));
+		
 		/*
 		char **sample = (char **)malloc(numCol * sizeof(char *));		
 		for(int x=0; x < 19999; x++)

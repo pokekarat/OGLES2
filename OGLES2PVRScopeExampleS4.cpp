@@ -91,17 +91,17 @@ double parseMem(char totalBuf[], char freeBuf[], char bufferBuf[])
 	tok = strtok(totalBuf, " ");
 	tok = strtok(NULL, " ");
 	total = atof(tok);
-	printf("%s\n", tok);
+	//printf("%s\n", tok);
 	
 	tok = strtok(freeBuf, " ");
 	tok = strtok(NULL, " ");
 	free = atof(tok);
-	printf("%f\n", free);
+	//printf("%f\n", free);
 	
 	tok = strtok(bufferBuf, " ");
 	tok = strtok(NULL, " ");
 	buffer = atof(tok);
-	printf("%f\n", buffer);
+	//printf("%f\n", buffer);
 	
 	ret = (total - (free+buffer))/total;
 	ret = ret * 100;
@@ -150,35 +150,36 @@ double parseCPU(char cpuLine[],int core)
 }
 
 void *callEvent(void *ptr){
-	char aut2[1024];
-	sprintf(aut2,"sh /data/local/tmp/firefox_yt_events.sh");
-	system(aut2);
+	/*char aut2[1024];
+	sprintf(aut2,"sh /data/local/tmp/gpu_train_event.sh");
+	system(aut2);*/
 }
 
+char buffer[4096];
+char header[9999];
+char saveFile[2048];
+
+int numCol = 9999;
+
+char **sample_cpu;
+
+FILE *fp_cpu;
+FILE *fp_cpu_chk;
+FILE *fp;
+FILE *fp_save;
+FILE *fp_mem;
+
+		
 //void *method(void *ptr)
 void method(int numTest, int numTime)
 {		
-		  // set the target framebuffer to read
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		GLubyte pixel[1*1*4];
-		glReadPixels (400, 300, 1, 1, GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixel);
-		printf("%d %d %d\n",pixel[200],pixel[151],pixel[2]);
+
+		sample_cpu = (char **)malloc(numTime * sizeof(char *));
 		
-		char buffer[4096];
-		char header[4096];
-		char aut[1024];
-		
-		int numCol = 2048;
-		
-		char sample[numTime * 100][numCol];
-		/*
-		char **sample = (char **)malloc(numCol * sizeof(char *));		
-		for(int x=0; x < 19999; x++)
-		{
-			sample[x] = (char *)malloc(numCol * sizeof(char));
-		}
-		*/
+		int c2=0;
+		for(c2=0; c2<numTime; c2++)
+			sample_cpu[c2] = (char *) malloc(numCol * sizeof(char));
+			
 		
 		printf("test passed2\n");
 		
@@ -218,15 +219,17 @@ void method(int numTest, int numTime)
 		// Step 3. Set the active group to 0
 		bActiveGroupChanged = true;
 		uActiveGroupSelect = 0;
-		unsigned int sampleRate = 100;
+		unsigned int sampleRate = 1;
 		unsigned int index = 0;
 		unsigned int j = 0;
 		
-		FILE *fp;
+		
 		
 		while (j < numTime)
 		{
 	
+				//printf("begin working...\n");
+				
 				// Ask for the active group 0 only on the first run. Then set it to 0xffffffff
 				if(bActiveGroupChanged)
 				{
@@ -246,6 +249,7 @@ void method(int numTest, int numTime)
 				} 
 				else 
 				{
+					printf("sample %d\n",j);
 
 					index = 0;
 					struct timeval tv;
@@ -255,13 +259,16 @@ void method(int numTest, int numTime)
 					// Step 4. Read and output the counter information for group 0 to Logcat
 					if(PVRScopeReadCountersThenSetGroup(psData, &sReading, time_in_mill * 1000, uActiveGroup))
 					{
+						printf("test test\n");
 					
 						//printf("Start uCounterNum = %d %lu \n",uCounterNum, time_in_mill);
-						if(j==1){
+						/*if(j==1){
+							printf("set bright to dark\n");
 							sprintf(aut,"echo %s > /sys/class/backlight/panel/brightness","0");
 							system(aut);
 						}
 						else if(j==5){
+							printf("set bright to bright\n");
 							sprintf(aut,"echo %s > /sys/class/backlight/panel/brightness","255");
 							system(aut);
 						}
@@ -273,825 +280,401 @@ void method(int numTest, int numTime)
 							int iret1;
 							
 							iret1 = pthread_create(&thread1, NULL, callEvent, (void*) message1);
-						}
-							
-						//Read CPU util every 1 second
-						if((fp = fopen("/proc/stat","r")) != NULL) 
-						{	
-									
-							fgets(buffer,sizeof buffer, fp);
-							
-							//CPU0
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"\nloop_%d\n_CPU_\n%s",j,"util0=");
-							//calculate cpu util
-							double cpu_util = parseCPU(buffer,0);
-							char output[50];
-							snprintf(output,50,"%.2f",cpu_util);
-							strcat(header,output);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							memset(&output[0], 0, sizeof(output));
-							
-							//CPU1
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"\n%s","util1=");
-							//calculate cpu util
-							cpu_util = parseCPU(buffer,1);
-							//char output[50];
-							snprintf(output,50,"%.2f",cpu_util);
-							strcat(header,output);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							memset(&output[0], 0, sizeof(output));
-							
-							//CPU2
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"\n%s","util2=");
-							//calculate cpu util
-							cpu_util = parseCPU(buffer,2);
-							//char output[50];
-							snprintf(output,50,"%.2f",cpu_util);
-							strcat(header,output);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							memset(&output[0], 0, sizeof(output));
-							
-							//CPU3
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"\n%s","util3=");
-							//calculate cpu util
-							cpu_util = parseCPU(buffer,3);
-							//char output[50];
-							snprintf(output,50,"%.2f",cpu_util);
-							strcat(header,output);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							memset(&output[0], 0, sizeof(output));
-						}
+						}*/
+						
+						strcat(header,"\n_LOOP_");
+						char loop[50];
+						snprintf(loop,50,"%d\n",j);
+						strcat(header,loop);
 						
 						//Read bigLittle_status
-						if((fp = fopen("/dev/bL_status","r")) != NULL) {	
-							
-							fgets(buffer,sizeof buffer, fp);
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","A15=");
+						if((fp_cpu = fopen("/dev/bL_status","r")) != NULL) 
+						{	
+							//printf("bl\n");
+							strcat(header,"_BL_\n");
+							fgets(buffer,sizeof buffer, fp_cpu);
+							fgets(buffer,sizeof buffer, fp_cpu);
 							strcat(header,buffer);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf(" %s \n",sample[j]);
-							
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"%s","A7=");
+							fgets(buffer,sizeof buffer, fp_cpu);
 							strcat(header,buffer);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp_cpu);
 						}
 						
-						//Read freq of CPU0-4
-						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq","r")) != NULL) {	
-							
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"%s","freq0=");
-							strcat(header,buffer);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf(" %s \n",sample[j]);
-						}
-						
-						//Read freq of CPU0-4
-						if((fp = fopen("/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq","r")) != NULL) {	
-							
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"%s","freq1=");
-							strcat(header,buffer);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf(" %s \n",sample[j]);
-						}
-						//Read freq of CPU0-4
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq","r")) != NULL) {	
-							
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"%s","freq2=");
-							strcat(header,buffer);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf(" %s \n",sample[j]);
-						}
-						//Read freq of CPU0-4
-						if((fp = fopen("/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq","r")) != NULL) {	
-							
-							fgets(buffer,sizeof buffer, fp);
-							sprintf(header,"%s","freq3=");
-							strcat(header,buffer);
-							strcat(sample[j],header);
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf(" %s \n",sample[j]);
-						}
-						
-						//Read CPU idle time C0S0IT //////////////////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpuidle/state0/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"%s","c0s0it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[0][0];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[0][0] = cur;
-						}
-						
-						//Read CPU idle time C0S1IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpuidle/state1/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c0s1it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[0][1];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[0][1] = cur;
-						}
-						
-						//Read CPU idle time C0S2IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpuidle/state2/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c0s2it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[0][2];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[0][2] = cur;
-						}
-						
-						
-						//Read CPU idle time C1S0IT //////////////////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu1/cpuidle/state0/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c1s0it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[1][0];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[1][0] = cur;
-						}
-						
-						//Read CPU idle time C1S1IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu1/cpuidle/state1/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c1s1it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[1][1];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[1][1] = cur;
-						}
-						
-						//Read CPU idle time C1S2IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu1/cpuidle/state2/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c1s2it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[1][2];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[1][2] = cur;
-						}
-						
-						//Read CPU idle time C2S0IT //////////////////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpuidle/state0/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c2s0it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[2][0];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[2][0] = cur;
-						}
-						
-						//Read CPU idle time C2S1IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpuidle/state1/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c2s1it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[2][1];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[2][1] = cur;
-						}
-						
-						//Read CPU idle time C2S2IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpuidle/state2/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c2s2it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[2][2];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[2][2] = cur;
-						}
-						
-						//Read CPU idle time C3S0IT //////////////////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu3/cpuidle/state0/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c3s0it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[3][0];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[3][0] = cur;
-						}
-						
-						//Read CPU idle time C3S1IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu3/cpuidle/state1/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c3s1it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[3][1];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[3][1] = cur;
-						}
-						
-						//Read CPU idle time C3S2IT
-						if((fp = fopen("/sys/devices/system/cpu/cpu3/cpuidle/state2/time","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c3s2it=");
-							double cur = atof(buffer);
-							double diff_time = cur - csit[3][2];
-							char output_idle[50];
-							snprintf(output_idle,50,"%.2f",diff_time/1000);
-							strcat(header,output_idle);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csit[3][2] = cur;
-						}
-						
-						//Read CPU idle usage C0S0 ////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpuidle/state0/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c0s0iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[0][0];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[0][0] = cur;
-						}
-						
-						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpuidle/state1/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c0s1iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[0][1];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[0][1] = cur;
-						}
-						if((fp = fopen("/sys/devices/system/cpu/cpu0/cpuidle/state2/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c0s2iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[0][2];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[0][2] = cur;
-						}
-						
-						
-						//Read CPU idle usage C1S0 ////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu1/cpuidle/state0/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c1s0iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[1][0];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[1][0] = cur;
-						}
-						
-						if((fp = fopen("/sys/devices/system/cpu/cpu1/cpuidle/state1/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c1s1iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[1][1];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[1][1] = cur;
-						}
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpuidle/state2/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c1s2iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[1][2];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[1][2] = cur;
-						}
-						
-						//Read CPU idle usage C2S0 ////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpuidle/state0/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c2s0iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[2][0];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[2][0] = cur;
-						}
-						
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpuidle/state1/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c2s1iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[2][1];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[2][1] = cur;
-						}
-						if((fp = fopen("/sys/devices/system/cpu/cpu2/cpuidle/state2/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c2s2iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[2][2];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[2][2] = cur;
-						}
-						
-						//Read CPU idle usage C3S0 ////////////////////////////////////////////////////////////
-						if((fp = fopen("/sys/devices/system/cpu/cpu3/cpuidle/state0/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c3s0iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[3][0];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[3][0] = cur;
-						}
-						
-						if((fp = fopen("/sys/devices/system/cpu/cpu3/cpuidle/state1/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c3s1iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[3][1];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[3][1] = cur;
-						}
-						
-						if((fp = fopen("/sys/devices/system/cpu/cpu3/cpuidle/state2/usage","r")) != NULL) {	
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","c3s2iu=");
-							double cur = atof(buffer);
-							double diff_entry = cur - csiu[3][2];
-							char output_entry[50];
-							snprintf(output_entry,50,"%.2f",diff_entry);
-							strcat(header,output_entry);				
-							strcat(sample[j],header);
-							
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
-							csiu[3][2] = cur;
-						}
-					
-						///////////////////////// Read memory usage /////////////////////////////////////////
-						
-						//if((fp = fopen("/data/local/tmp/busybox free -m", "r")) != NULL)
-						if((fp = fopen("/proc/meminfo","r")) != NULL)
-						{
-							
-							fgets(buffer, sizeof buffer, fp);
-							//printf("buffer = %s\n",buffer);
-							char buffer2[1024];
-							char buffer3[1024];
-							
-							fgets(buffer2, sizeof buffer, fp);
-							//printf("buffer2 = %s\n",buffer2);
-							
-							fgets(buffer3, sizeof buffer, fp);
-							//printf("buffer3 = %s\n",buffer3);
-							
-							//fgets(buffer, sizeof buffer, fp);
-							//fprintf(stdout, "-%s=\n",buffer);
-							
-							sprintf(header,"\n%s","mem_util=");
-							double mem_util = parseMem(buffer, buffer2, buffer3);
+						//Read CPU util every 1 second
+						strcat(header,"_CPU_\n");
+						if((fp_cpu = fopen("/proc/stat","r")) != NULL) 
+						{		
+							
+							fgets(buffer,sizeof buffer, fp_cpu);
+							
+							//CPU0
+							fgets(buffer,sizeof buffer, fp_cpu);
+							double cpu_util = parseCPU(buffer,0);
 							char output[50];
-							snprintf(output,50,"%.2f",mem_util);
+							snprintf(output,50,"util=%.2f",cpu_util);
 							strcat(header,output);
-							strcat(sample[j],header);
-					
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&buffer2[0], 0, sizeof(buffer2));
-							memset(&buffer3[0], 0, sizeof(buffer3));
-							memset(&header[0], 0, sizeof(header));
+							memset(buffer, 0, sizeof(buffer));
+							memset(output, 0, sizeof(output));
+							
+							if((fp_cpu_chk = fopen("/sys/devices/system/cpu/cpu1/online","r")) != NULL){ 
+								char test[50];
+								fgets(test, sizeof test, fp_cpu_chk);
+								
+								if(atoi(test) == 1){
+									fgets(buffer,sizeof buffer, fp_cpu);
+									cpu_util = parseCPU(buffer,1);
+									snprintf(output,50," %.2f",cpu_util);
+									strcat(header,output);
+									memset(buffer, 0, sizeof(buffer));
+									memset(output, 0, sizeof(output));
+									//fclose(fp_cpu);
+								}
+								else
+								{
+									
+									strcat(header," x");
+								}
+								fclose(fp_cpu_chk);
+							}
+							
+							if((fp_cpu_chk = fopen("/sys/devices/system/cpu/cpu2/online","r")) != NULL){ 
+								char test[50];
+								fgets(test, sizeof test, fp_cpu_chk);
+								if(atoi(test) == 1){
+									fgets(buffer,sizeof buffer, fp_cpu);
+									cpu_util = parseCPU(buffer,2);
+									snprintf(output,50," %.2f",cpu_util);
+									strcat(header,output);
+									memset(buffer, 0, sizeof(buffer));
+									memset(output, 0, sizeof(output));
+									//fclose(fp_cpu);
+								}
+								else
+								{
+									strcat(header," x");
+									//printf(" x");
+								}
+								fclose(fp_cpu_chk);
+							}
+							
+							if((fp_cpu_chk = fopen("/sys/devices/system/cpu/cpu3/online","r")) != NULL){ 
+								char test[50];
+								fgets(test, sizeof test, fp_cpu_chk);
+								if(atoi(test) == 1)
+								{
+									fgets(buffer,sizeof buffer, fp_cpu);
+									cpu_util = parseCPU(buffer,3);
+									snprintf(output,50," %.2f",cpu_util);
+									strcat(header,output);
+									memset(buffer, 0, sizeof(buffer));
+									memset(output, 0, sizeof(output));
+									//fclose(fp_cpu);
+								}
+								else
+								{
+									strcat(header," x");
+									//printf("last x\n");
+								}
+								
+								fclose(fp_cpu_chk);
+								
+							}
+							
+							fclose(fp_cpu);		
+							
+						}
+						
+						printf(">> %s\n <<",header);
+										
+						strcat(header,"\n_FREQ_");
+						
+						//Read freq0
+						if((fp_cpu = fopen("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq","r")) != NULL)
+						{	
+							
+							fgets(buffer,sizeof buffer, fp_cpu);
+							strcat(header,"\nfreq0=");
+							strcat(header,buffer);
+							printf("%s\n",header);
+							memset(buffer, 0, sizeof(buffer));
+						}
+						
+						fclose(fp_cpu);
+						
+						//Read freq1
+						if((fp_cpu = fopen("/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq","r")) != NULL)
+						{	
+							printf("freq1\n");
+							fgets(buffer,sizeof buffer, fp_cpu);
+							strcat(header,"freq1=");
+							strcat(header,buffer);
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp_cpu);
 						}
 						else
 						{
-							printf("mem null");
+							strcat(header,"freq1=x");
+							printf("freq1=x");
+						}					
+
+						//Read freq2
+						if((fp_cpu = fopen("/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq","r")) != NULL) {	
+							
+							printf("freq2\n");
+							fgets(buffer,sizeof buffer, fp_cpu);
+							strcat(header,"freq2=");
+							strcat(header,buffer);
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp_cpu);	
+						}
+						else
+						{
+							strcat(header,"\nfreq2=x");
+							printf("\nfreq2=x");
 						}
 						
+								
+						
+						//Read freq3
+						if((fp_cpu = fopen("/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq","r")) != NULL) {	
+							printf("freq3\n");
+							fgets(buffer,sizeof buffer, fp_cpu);
+							strcat(header,"freq3=");
+							strcat(header,buffer);
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp_cpu);
+														
+						}
+						else
+						{
+							strcat(header,"\nfreq3=x");
+							printf("\nfreq3=x");
+						}
+						
+						
+						
+						printf("%s\n",header);
+						
+						//Read CPU idle time C0S0IT //////////////////////////////////////////////////////////////////////////
+						strcat(header,"\n_IDLE_TIME_\n");
+						printf("idle time\n");
+						for(int core=0; core<4; core++)
+						{
+							char title[100];
+							snprintf(title,100,"idle_time_%d=",core);
+							strcat(header,title);
+						
+							for(int state=0; state<3; state++)
+							{
+							
+								char proc[100];
+								sprintf(proc,"/sys/devices/system/cpu/cpu%d/cpuidle/state%d/time",core,state);
+								
+								if((fp_cpu = fopen(proc,"r")) != NULL) 
+								{	
+								
+									fgets(buffer,sizeof buffer, fp_cpu);
+									strcat(header," ");
+									double cur = atof(buffer);
+									double diff_time = cur - csit[core][state];
+									char output_idle[50];
+									snprintf(output_idle,50,"%.2f",diff_time/1000);
+									strcat(header,output_idle);				
+									memset(buffer, 0, sizeof(buffer));
+									csit[core][state] = cur;
+									fclose(fp_cpu);
+								}
+								else{
+									strcat(header," x");
+								}
+							}
+							
+							strcat(header,"\n");
+								
+						}
+						
+						strcat(header,"_IDLE_USAGE_\n");
+						for(int core=0; core<4; core++)
+						{
+							char title[100];
+							snprintf(title,100,"idle_usage_%d=",core);
+							strcat(header,title);
+						
+							for(int state=0; state<3; state++)
+							{
+							
+								char proc[100];
+								sprintf(proc,"/sys/devices/system/cpu/cpu%d/cpuidle/state%d/usage",core,state);
+								
+								if((fp_cpu = fopen(proc,"r")) != NULL) 
+								{	
+								
+									fgets(buffer,sizeof buffer, fp_cpu);
+									strcat(header," ");
+									int cur = atoi(buffer);
+									int diff_entry = cur - csiu[core][state];
+									char output_entry[50];
+									snprintf(output_entry,50,"%d",diff_entry);
+									strcat(header,output_entry);				
+									memset(buffer, 0, sizeof(buffer));
+									csiu[core][state] = cur;
+									fclose(fp_cpu);
+								}
+								else{
+									strcat(header," x");
+								}
+							}
+							
+							strcat(header,"\n");
+								
+						}
+						
+						///////////////////////// Read memory usage /////////////////////////////////////////
+						strcat(header,"_MEM_\n");
+						//if((fp = fopen("/data/local/tmp/busybox free -m", "r")) != NULL)
+						if((fp_mem = fopen("/proc/meminfo","r")) != NULL)
+						{
+							//printf("mem\n");
+							fgets(buffer, sizeof buffer, fp_mem);
+							//printf("buffer = %s\n",buffer);
+							strcat(header,"mem=");
+							char buffer2[1024];
+							char buffer3[1024];
+							fgets(buffer2, sizeof buffer, fp_mem);
+							fgets(buffer3, sizeof buffer, fp_mem);
+							double mem_util = parseMem(buffer, buffer2, buffer3);
+							char output[50];
+							snprintf(output,50,"%.2f",mem_util);		
+							strcat(header,output);
+														
+							memset(buffer, 0, sizeof(buffer));
+							memset(buffer2, 0, sizeof(buffer2));
+							memset(buffer3, 0, sizeof(buffer3));		
+							fclose(fp_mem);
+							
+						}
+					
+						strcat(header,"\n_DISPLAY_");
 						//Read bright
 						if((fp = fopen("/sys/class/backlight/panel/brightness","r")) != NULL) {	
+						
+							//printf("brightness\n");
 							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n_DISPLAY_\n%s","bright=");
+							//sprintf(header,"\n_DISPLAY_\n%s","bright=");
+							strcat(header,"\nbright=");
 							strcat(header,buffer);				
-							strcat(sample[j],header);
-						
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp);
 						}
-						
+					
+						strcat(header,"_WIFI_\n");
 						//wifi				
 						if((fp = fopen("/sys/class/net/wlan0/statistics/tx_packets","r")) != NULL) {
-						
+							
+							//printf("WiFi\n");
 							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"_WiFi_\n%s","tx=");
-							
 							double cur = atof(buffer);
 							double diff_tx = cur - prev_tx;
 							char output_tx[50];
 							snprintf(output_tx,50,"%.2f",diff_tx);
-							
-							strcat(header,output_tx);				
-							strcat(sample[j],header);
-						
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
+							strcat(header,"tx=");
+							strcat(header,output_tx);
+							memset(buffer, 0, sizeof(buffer));
 							
 							prev_tx = cur;
+							fclose(fp);
 						}
 						
 						if((fp = fopen("/sys/class/net/wlan0/statistics/rx_packets","r")) != NULL) {
 						
 							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","rx=");
-							
 							double cur = atof(buffer);
 							double diff_rx = cur - prev_rx;
 							char output_rx[50];
 							snprintf(output_rx,50,"%.2f",diff_rx);
-							
-							strcat(header,output_rx);				
-							strcat(sample[j],header);
-						
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
+							strcat(header,"\nrx=");
+							strcat(header,output_rx);
+							memset(buffer, 0, sizeof(buffer));
 							
 							prev_rx = cur;
+							fclose(fp);
 							
 						}
 						
 						if((fp = fopen("/sys/class/net/wlan0/operstate","r")) != NULL) {
 						
 							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"\n%s","state=");
+							strcat(header,"\noperstate=");				
 							strcat(header,buffer);				
-							strcat(sample[j],header);
-						
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							//printf("%s \n",sample[j]);
-							
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp);
 						}
 						
 						// Check for all the counters in the system if the counter has a value on the given active group and ouptut it.
-						bool isFirst = true;
 						
-						for(int i = 0; i < uCounterNum; ++i)
+						strcat(header,"_GPU_\n");
+						
+						for(int p = 0; p < uCounterNum; ++p)
 						{					
 							
-							if(i < sReading.nValueCnt)
+							if(p < sReading.nValueCnt)
 							{										
-							
-							    //printf("GPU >> %d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
 								
-								/*if ((strcmp(psCounters[i].pszName, "Frame time") == 0) || 
-								(strcmp(psCounters[i].pszName, "Frames per second (FPS)") == 0) ||
-								(strcmp(psCounters[i].pszName, "GPU task load: 3D core") == 0) || 
-								(strcmp(psCounters[i].pszName, "GPU task load: TA core") == 0) ||
-								(strcmp(psCounters[i].pszName, "GPU task time: 3D core") == 0) || 
-								(strcmp(psCounters[i].pszName, "GPU task time: TA core") == 0) || 
-								(strcmp(psCounters[i].pszName, "TA load") == 0) || 
-								(strcmp(psCounters[i].pszName, "Texture unit(s) load") == 0) || 
-								(strcmp(psCounters[i].pszName, "USSE clock cycles per pixel") == 0) ||
-								(strcmp(psCounters[i].pszName, "USSE clock cycles per vertex") == 0) || 
-								(strcmp(psCounters[i].pszName, "USSE load: Pixel") == 0) || 
-								(strcmp(psCounters[i].pszName, "USSE load: Vertex") == 0) ||
-								(strcmp(psCounters[i].pszName, "Vertices per frame") == 0) ||
-								(strcmp(psCounters[i].pszName, "Texture unit(s) load") == 0)||
-								(strcmp(psCounters[i].pszName, "USSE load: Pixel") == 0) ||
-								(strcmp(psCounters[i].pszName, "USSE load: Stall") == 0)||
-								(strcmp(psCounters[i].pszName, "Vertices per second: on-screen") == 0))
-								{
-									
-									if(isFirst)
-									{
-										isFirst = false;
-										sprintf(header,"_GPU_\n%s=",psCounters[i].pszName);
-									}
-									else
-										sprintf(header,"%s=",psCounters[i].pszName);
-									
-									sprintf(buffer, "%f\n",sReading.pfValueBuf[i]);
-									strcat(header,buffer);								
-									strcat(sample[j],header);
-
-									memset(&buffer[0], 0, sizeof(buffer));
-									memset(&header[0], 0, sizeof(header));
-									//strcat(sample[j]," \n");
-									//printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
-									//printf("%s \n",sample[j]);
-								}	*/	
-
-								if(isFirst)
-								{
-									isFirst = false;
-									sprintf(header,"_GPU_\n%s=",psCounters[i].pszName);
-								}
-								else
-								{
-									sprintf(header,"%s=",psCounters[i].pszName);
-								}
+								strcat(header,psCounters[p].pszName);
+								strcat(header,"=");								
+								char params[50];
+								snprintf(params,50,"%.2f\n",sReading.pfValueBuf[p]);
+								strcat(header, params);				
+								//memset(buffer, 0, sizeof(buffer));
 								
-								sprintf(buffer, "%f\n",sReading.pfValueBuf[i]);
-								strcat(header,buffer);								
-								strcat(sample[j],header);
-
-								memset(&buffer[0], 0, sizeof(buffer));
-								memset(&header[0], 0, sizeof(header));	
-
-								//printf("%s \n",sample[j]);								
 							}
 						}
 					
-						isFirst = true;
-						//printf("End\n");
 					}
 					
-					//printf("Data >> %s \n",sample[j]);
+					strcpy(sample_cpu[j],header);
+					printf("%s\n",sample_cpu[j]);
+					memset(header, 0, sizeof(header));
+					printf("End_loop %d\n",j);
 					++j;
+						
 				}
 				
 				//Poll for the counters once a second
-				usleep(10 * 1000);
+				usleep(1000000);
 				//usleep(1000000);
+								
 		}
-		
-		//sprintf(aut,"sh /data/local/tmp/stopEvents.sh");
-		//system(aut);
-		
-		//fclose(fp);
-			
+					
 		// Step 5. Shutdown PVRScopeStats
 		PVRScopeDeInitialise(&psData, &psCounters, &sReading);
 		
 		printf("save file\n");
-		sprintf(aut,"/data/local/tmp/stat/sample%d.txt",numTest);
-		fp = fopen(aut,"w+");
-		for(int i = 0; i <= numTime; i++)
+		sprintf(saveFile,"/data/local/tmp/stat/sample%d.txt",numTest);
+		fp_save = fopen(saveFile,"w+");
+		
+		for(int i = 0; i < numTime; i++)
 	    {
-			fprintf(fp, "%s", sample[i]);
+			printf("%s",sample_cpu[i]);
+			fprintf(fp_save, "%s", sample_cpu[i]);
 		}
-		fclose(fp);
+		
+		printf("close all file\n");
+		fclose(fp_save);
 		
 		printf("end file\n");
-		//Clear array memory
-		memset(&sample[0], 0, sizeof(sample));
-		//memset(&buffer[0], 0, sizeof(buffer));
-		//memset(&header[0], 0, sizeof(header));
-		memset(&aut[0], 0, sizeof(aut));
 		
+		//Clear array memory
+		//sample is a heap data structure
+		free(sample_cpu);
+		
+		memset(saveFile, 0, sizeof(saveFile));
 		memset(prev_total, 0, sizeof(prev_total));
 		memset(prev_idle, 0, sizeof(prev_idle));
 		memset(csit, 0, sizeof(csit));
 		memset(csiu, 0, sizeof(csiu));
-	
+		
 		prev_tx = 0;
 		prev_rx = 0;
 		

@@ -73,8 +73,6 @@ double prev_idle_entry = 0;
 double prev_tx = 0;
 double prev_rx = 0;
 char **sample;
-FILE *fp_save;
-char saveFile[2048];
 
 double parseMem(char memLine[])
 {
@@ -160,10 +158,49 @@ double parseCPU(char cpuLine[])
 	return diff_util;
 }
 
+void *callEvent(void *ptr){
+	char aut2[1024];
+	sprintf(aut2,"sh /data/local/tmp/firefox_yt_events.sh");
+	system(aut2);
+}
+
 //void *method(void *ptr)
 void method(int numTest, int numTime)
 {		
+		JNIEnv* env;
+		jclass clazz;
+		jobject obj;
+		jobject result;
+		jmethodID id;
+				
+		//jclass displayClass = env->FindClass("android/view/Display");
+		//clazz = env->GetObjectClass(obj); //com/example/trains4/MainActivity");
+		//clazz = env->FindClass("android/net/wifi/WifiInfo");
+		
+		/*if (clazz == 0) 
+		{
+			fprintf(stderr, "Can't locate the class. Exiting...\n");
+			//exit(-1);
+		}
+		else
+		{
+			printf("success finding class\n");
+		}
+		
+		id = env->GetMethodID(clazz, "getWiFiLinkSpeed", "()I");
+		
+		if(id == 0)
+			printf("error\n");
+		else
+		{		
+			jstring jstr = env->NewStringUTF("This comes from jni.");
 			
+			result = env->CallObjectMethod(obj, id, jstr);
+			const char* str = env->GetStringUTFChars((jstring) result, NULL); 
+			printf("%s\n", str);
+		}
+		*/
+		
 		char buffer[2048];
 		char header[1024];
 		char aut[1024];
@@ -176,7 +213,14 @@ void method(int numTest, int numTime)
 		for(c=0; c<numTime; c++)
 			sample[c] = (char *) malloc(numCol * sizeof(char));
 		
-			
+		/*
+		char **sample = (char **)malloc(numCol * sizeof(char *));		
+		for(int x=0; x < 19999; x++)
+		{
+			sample[x] = (char *)malloc(numCol * sizeof(char));
+		}
+		*/
+		
 		printf("test passed2\n");
 		
 		SPVRScopeImplData *psData;
@@ -250,8 +294,7 @@ void method(int numTest, int numTime)
 					{
 					
 						//printf("Start uCounterNum = %d %lu \n",uCounterNum, time_in_mill);
-						/*
-						if(j==3){
+						if(j==1){
 							sprintf(aut,"echo %s > /sys/class/backlight/s5p_bl/brightness","0");
 							system(aut);
 						}
@@ -259,8 +302,16 @@ void method(int numTest, int numTime)
 							sprintf(aut,"echo %s > /sys/class/backlight/s5p_bl/brightness","255");
 							system(aut);
 						}
-						*/
-						
+						else if(j==10){
+			
+							pthread_t thread1;
+							
+							const char *message1 = "Thread 1";
+							int iret1;
+							
+							iret1 = pthread_create(&thread1, NULL, callEvent, (void*) message1);
+						}
+							
 						//Read CPU util every 1 second
 						if((fp = fopen("/proc/stat","r")) != NULL) {	
 									
@@ -280,7 +331,6 @@ void method(int numTest, int numTime)
 							memset(&header[0], 0, sizeof(header));
 							
 							//printf("util %s \n", sample[j]);
-							fclose(fp);
 						}
 						
 						//Read CPU Freq
@@ -293,8 +343,6 @@ void method(int numTest, int numTime)
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
 							//printf(" %s \n",sample[j]);
-							
-							fclose(fp);
 						}
 						
 						//Read CPU idle time
@@ -315,7 +363,6 @@ void method(int numTest, int numTime)
 							//printf("%s \n",sample[j]);
 							
 							prev_idle_time = cur;
-							fclose(fp);
 						}
 						
 						//Read CPU idle usage
@@ -336,7 +383,6 @@ void method(int numTest, int numTime)
 							//printf("%s \n",sample[j]);
 							
 							prev_idle_entry = cur;
-							fclose(fp);
 						}
 						
 						//Read memory usage
@@ -355,13 +401,10 @@ void method(int numTest, int numTime)
 					
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
-							fclose(fp);
 						}
 						
-						
-						//LCD bright
-						if((fp = fopen("/sys/class/backlight/s5p_bl/brightness","r")) != NULL) 
-						{	
+						//Read bright
+						if((fp = fopen("/sys/class/backlight/s5p_bl/brightness","r")) != NULL) {	
 							fgets(buffer,sizeof buffer, fp);
 							
 							sprintf(header,"\n_DISPLAY_\n%s","bright=");
@@ -371,7 +414,6 @@ void method(int numTest, int numTime)
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
 							//printf("%s \n",sample[j]);
-							fclose(fp);
 						}
 						
 						//wifi				
@@ -394,7 +436,6 @@ void method(int numTest, int numTime)
 							//printf("%s \n",sample[j]);
 							
 							prev_tx = cur;
-							fclose(fp);
 						}
 						
 						if((fp = fopen("/sys/class/net/wlan0/statistics/rx_packets","r")) != NULL) {
@@ -416,7 +457,7 @@ void method(int numTest, int numTime)
 							//printf("%s \n",sample[j]);
 							
 							prev_rx = cur;
-							fclose(fp);
+							
 						}
 						
 						if((fp = fopen("/sys/class/net/wlan0/operstate","r")) != NULL) {
@@ -429,79 +470,50 @@ void method(int numTest, int numTime)
 						
 							memset(&buffer[0], 0, sizeof(buffer));
 							memset(&header[0], 0, sizeof(header));
-							printf("wlan\n");
-							fclose(fp);
+							//printf("%s \n",sample[j]);
+							
 						}
 						
-						// Battery //
-						sprintf(header,"%s\n","_BATT_");
-						strcat(sample[j],header);
-						if((fp = fopen("/sys/class/power_supply/battery/capacity","r")) != NULL) {
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"%s","capacity=");
-							strcat(header,buffer);				
-							strcat(sample[j],header);
-						
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							
-							fclose(fp);
-						}
-						
-						if((fp = fopen("/sys/class/power_supply/battery/voltage_now","r")) != NULL) {
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"%s","volt=");
-							strcat(header,buffer);				
-							strcat(sample[j],header);
-						
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							
-							fclose(fp);
-						}
-						
-						if((fp = fopen("/sys/class/power_supply/battery/temp","r")) != NULL) {
-						
-							fgets(buffer,sizeof buffer, fp);
-							
-							sprintf(header,"%s","temp=");
-							strcat(header,buffer);				
-							strcat(sample[j],header);
-						
-							memset(&buffer[0], 0, sizeof(buffer));
-							memset(&header[0], 0, sizeof(header));
-							
-							fclose(fp);
-						}
-						
-						sprintf(header,"%s\n","_GPU_");
-						strcat(sample[j],header);
-						
-						for(int p = 0; p < uCounterNum; ++p)
+						// Check for all the counters in the system if the counter has a value on the given active group and ouptut it.
+						bool isFirst = true;
+						for(int i = 0; i < uCounterNum; ++i)
 						{					
-							if(p < sReading.nValueCnt)
-							{																
-								/*sprintf(buffer, "%f\n",sReading.pfValueBuf[p]);
-								strcat(header,buffer);								
-								strcat(sample[j],header);
-								memset(&buffer[0], 0, sizeof(buffer));
-								memset(&header[0], 0, sizeof(header));*/
-								//memset(buffer, 0, sizeof(buffer));							
+							
+							//printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
+							
+							if(i < sReading.nValueCnt)
+							{										
+								if ((strcmp(psCounters[i].pszName, "Frame time") == 0) || (strcmp(psCounters[i].pszName, "Frames per second (FPS)") == 0) || (strcmp(psCounters[i].pszName, "GPU task load: 3D core") == 0) || 
+								(strcmp(psCounters[i].pszName, "GPU task load: TA core") == 0) || (strcmp(psCounters[i].pszName, "GPU task time: 3D core") == 0) || (strcmp(psCounters[i].pszName, "GPU task time: TA core") == 0) || 
+								(strcmp(psCounters[i].pszName, "TA load") == 0) || (strcmp(psCounters[i].pszName, "Texture unit(s) load") == 0) || (strcmp(psCounters[i].pszName, "USSE clock cycles per pixel") == 0) ||
+								(strcmp(psCounters[i].pszName, "USSE clock cycles per vertex") == 0) || (strcmp(psCounters[i].pszName, "USSE load: Pixel") == 0) || (strcmp(psCounters[i].pszName, "USSE load: Vertex") == 0) ||
+								(strcmp(psCounters[i].pszName, "Vertices per frame") == 0) ||(strcmp(psCounters[i].pszName, "Texture unit(s) load") == 0)||(strcmp(psCounters[i].pszName, "USSE load: Pixel") == 0) ||
+								(strcmp(psCounters[i].pszName, "USSE load: Stall") == 0)||(strcmp(psCounters[i].pszName, "Vertices per second: on-screen") == 0))
+								{
 									
-								sprintf(header,"%s=",psCounters[p].pszName);
-								sprintf(buffer, "%f\n",sReading.pfValueBuf[p]);
-								strcat(header,buffer);								
-								strcat(sample[j],header);
+									if(isFirst)
+									{
+										isFirst = false;
+										sprintf(header,"_GPU_\n%s=",psCounters[i].pszName);
+									}
+									else
+										sprintf(header,"%s=",psCounters[i].pszName);
+									
+									sprintf(buffer, "%f\n",sReading.pfValueBuf[i]);
+									strcat(header,buffer);								
+									strcat(sample[j],header);
 
-								memset(&buffer[0], 0, sizeof(buffer));
-								memset(&header[0], 0, sizeof(header));		
-								
+									memset(&buffer[0], 0, sizeof(buffer));
+									memset(&header[0], 0, sizeof(header));
+									//strcat(sample[j]," \n");
+									//printf("%d : %s : %f\n", j,  psCounters[i].pszName, sReading.pfValueBuf[i]);
+									//printf("%s \n",sample[j]);
+								}			
 							}
 						}
+					
+						isFirst = true;
+						//printf("End\n");
 					}
 					
 					//printf("Data >> %s \n",sample[j]);
@@ -521,7 +533,7 @@ void method(int numTest, int numTime)
 		// Step 5. Shutdown PVRScopeStats
 		PVRScopeDeInitialise(&psData, &psCounters, &sReading);
 		
-		/*printf("save file\n");
+		printf("save file\n");
 		sprintf(aut,"/data/local/tmp/stat/sample%d.txt",numTest);
 		fp = fopen(aut,"w+");
 		for(int i = 0; i <= numTime; i++)
@@ -530,23 +542,7 @@ void method(int numTest, int numTime)
 		}
 		fclose(fp);
 		
-		printf("end file\n");*/
-		
-		printf("save file\n");
-		sprintf(saveFile,"/data/local/tmp/stat/sample%d.txt", numTest);
-		fp_save = fopen(saveFile,"w+");
-		
-		for(int i = 0; i < numTime; i++)
-	    {
-			//printf("%s",sample[i]);
-			fprintf(fp_save, "%s", sample[i]);
-		}
-		
-		printf("close all file\n");
-		fclose(fp_save);
-		
 		printf("end file\n");
-		
 		//Clear array memory
 		memset(&sample[0], 0, sizeof(sample));
 		//memset(&buffer[0], 0, sizeof(buffer));
@@ -559,6 +555,7 @@ void method(int numTest, int numTime)
 		prev_idle_entry = 0;
 		prev_tx = 0;
 		prev_rx = 0;
+
 		
 		printf("clear file\n");
 		exit(0);

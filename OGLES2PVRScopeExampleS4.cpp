@@ -169,15 +169,21 @@ FILE *fp;
 FILE *fp_save;
 FILE *fp_mem;
 
-		
-//void *method(void *ptr)
-void method(int numTest, int numTime)
+int nTest = 0; //  = atoi(argv[1]);    
+int nRows = 0; //atoi(argv[2]);
+int delay = 0;
+int start_strc = 0;
+int stop_strc = 0;
+int start_load = 50000;
+int stop_load = 45000;
+
+void method()
 {		
 
-		sample_cpu = (char **)malloc(numTime * sizeof(char *));
+		sample_cpu = (char **)malloc(nRows * sizeof(char *));
 		
 		int c2=0;
-		for(c2=0; c2<numTime; c2++)
+		for(c2=0; c2<nRows; c2++)
 			sample_cpu[c2] = (char *) malloc(numCol * sizeof(char));
 			
 		
@@ -208,28 +214,22 @@ void method(int numTest, int numTime)
 			printf("Error initializing PVRScope...\n");
 		}
 		
-		//Print each and every counter (and its group)		
-		//LOGI("Find below the list of counters:");
-		
-		/*for(int i = 0; i < uCounterNum; ++i)
-		{
-			printf(" Group %d %s\n", psCounters[i].nGroup, psCounters[i].pszName);
-		}*/
-		
-		// Step 3. Set the active group to 0
 		bActiveGroupChanged = true;
 		uActiveGroupSelect = 0;
-		unsigned int sampleRate = 1;
+		unsigned int sampleRate = delay;
 		unsigned int index = 0;
 		unsigned int j = 0;
+		unsigned int k = 0;
+			
+		printf("Begin working...\n");
+		strcat(header,"delay=");
+		char delayData[50];
+		snprintf(delayData,50,"%d\n",delay);
+		strcat(header,delayData);
 		
-		
-		
-		while (j < numTime)
+		while (j < nRows)
 		{
 	
-				//printf("begin working...\n");
-				
 				// Ask for the active group 0 only on the first run. Then set it to 0xffffffff
 				if(bActiveGroupChanged)
 				{
@@ -242,16 +242,25 @@ void method(int numTest, int numTime)
 				
 				++index;
 				
-				if (index < sampleRate) 
+				if (index < 100) 
 				{
 					// Sample the counters every 10ms. Don't read or output it.
 					PVRScopeReadCountersThenSetGroup(psData, NULL, 0, uActiveGroup);
 				} 
 				else 
 				{
+				
+					if(k < delay)
+					{
+						++k;
+						index = 0;
+						continue;
+					}
+
+					k = 0;
+					index = 0;
 					printf("sample %d\n",j);
 
-					index = 0;
 					struct timeval tv;
 					gettimeofday(&tv, NULL);
 					unsigned long time_in_mill = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
@@ -261,26 +270,21 @@ void method(int numTest, int numTime)
 					{
 						printf("test test\n");
 					
-						//printf("Start uCounterNum = %d %lu \n",uCounterNum, time_in_mill);
-						/*if(j==1){
-							printf("set bright to dark\n");
-							sprintf(aut,"echo %s > /sys/class/backlight/panel/brightness","0");
-							system(aut);
+						//if(j == (4*60) / delay)
+						if(j==start_strc)
+						{
+							char command[1024];
+							sprintf(command,"./data/local/tmp/strc %d %d &",start_load,stop_load);
+							system(command);
 						}
-						else if(j==5){
-							printf("set bright to bright\n");
-							sprintf(aut,"echo %s > /sys/class/backlight/panel/brightness","255");
-							system(aut);
+						
+						//if(j == (15*60) / delay)
+						if(j==stop_strc)
+						{
+							char command2[1024];
+							sprintf(command2,"./data/local/tmp/busybox killall strc");
+							system(command2);
 						}
-						else if(j==10){
-			
-							pthread_t thread1;
-							
-							const char *message1 = "Thread 1";
-							int iret1;
-							
-							iret1 = pthread_create(&thread1, NULL, callEvent, (void*) message1);
-						}*/
 						
 						strcat(header,"\n_LOOP_");
 						char loop[50];
@@ -301,7 +305,7 @@ void method(int numTest, int numTime)
 							fclose(fp_cpu);
 						}
 						
-						//Read CPU util every 1 second
+					
 						strcat(header,"_CPU_\n");
 						if((fp_cpu = fopen("/proc/stat","r")) != NULL) 
 						{		
@@ -331,8 +335,7 @@ void method(int numTest, int numTime)
 									//fclose(fp_cpu);
 								}
 								else
-								{
-									
+								{							
 									strcat(header," x");
 								}
 								fclose(fp_cpu_chk);
@@ -566,6 +569,7 @@ void method(int numTest, int numTime)
 							strcat(header,buffer);				
 							memset(buffer, 0, sizeof(buffer));
 							fclose(fp);
+							
 						}
 					
 						strcat(header,"_WIFI_\n");
@@ -585,6 +589,9 @@ void method(int numTest, int numTime)
 							prev_tx = cur;
 							fclose(fp);
 						}
+						else{
+							strcat(header,"tx=0");
+						}
 						
 						if((fp = fopen("/sys/class/net/wlan0/statistics/rx_packets","r")) != NULL) {
 						
@@ -601,11 +608,51 @@ void method(int numTest, int numTime)
 							fclose(fp);
 							
 						}
+						else{
+							strcat(header,"\nrx=0");
+						}
 						
 						if((fp = fopen("/sys/class/net/wlan0/operstate","r")) != NULL) {
 						
 							fgets(buffer,sizeof buffer, fp);
 							strcat(header,"\noperstate=");				
+							strcat(header,buffer);				
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp);
+						}
+						else{
+							strcat(header,"\noperstate=0");
+						}
+						
+						strcat(header,"\n_BATTERY_\n");
+						if((fp = fopen("/sys/class/power_supply/battery/voltage_now","r")) != NULL) {
+						
+							fgets(buffer,sizeof buffer, fp);
+							strcat(header,"batt_volt=");				
+							strcat(header,buffer);				
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp);
+						}
+						
+						if((fp = fopen("/sys/class/power_supply/battery/current_now","r")) != NULL) {
+							fgets(buffer,sizeof buffer, fp);
+							strcat(header,"batt_current=");				
+							strcat(header,buffer);				
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp);
+						}
+						
+						if((fp = fopen("/sys/class/power_supply/battery/capacity","r")) != NULL) {
+							fgets(buffer,sizeof buffer, fp);
+							strcat(header,"batt_capacity=");				
+							strcat(header,buffer);				
+							memset(buffer, 0, sizeof(buffer));
+							fclose(fp);
+						}
+						
+						if((fp = fopen("/sys/class/power_supply/battery/temp","r")) != NULL) {
+							fgets(buffer,sizeof buffer, fp);
+							strcat(header,"batt_capacity=");				
 							strcat(header,buffer);				
 							memset(buffer, 0, sizeof(buffer));
 							fclose(fp);
@@ -642,7 +689,7 @@ void method(int numTest, int numTime)
 				}
 				
 				//Poll for the counters once a second
-				usleep(1000000);
+				usleep(10000);
 				//usleep(1000000);
 								
 		}
@@ -651,10 +698,10 @@ void method(int numTest, int numTime)
 		PVRScopeDeInitialise(&psData, &psCounters, &sReading);
 		
 		printf("save file\n");
-		sprintf(saveFile,"/data/local/tmp/stat/sample%d.txt",numTest);
+		sprintf(saveFile,"/data/local/tmp/stat/sample%d.txt", nTest);
 		fp_save = fopen(saveFile,"w+");
 		
-		for(int i = 0; i < numTime; i++)
+		for(int i = 0; i < nRows; i++)
 	    {
 			printf("%s",sample_cpu[i]);
 			fprintf(fp_save, "%s", sample_cpu[i]);
@@ -688,11 +735,24 @@ int main(int argc, char **argv)
 		//pthread_t thread1;
 		//const char *message1 = "Thread 1";
 		//int iret1;
-		int nTest  = atoi(argv[1]);    
-		int nTime = atoi(argv[2]);
-		//iret1 = pthread_create(&thread1, NULL, method, (void*) message1);
-		method(nTest, nTime);
-		
+		if(argc < 4) 
+		{
+			printf("Please put ./sample fileIndex NumberOfsample delay(second) sample_of_start_strc sample_of_stop_strc sample_of_start_load sample_of_stop_load\n");
+		}
+		else 
+		{
+			nTest  = atoi(argv[1]);    
+			nRows = atoi(argv[2]);
+			delay = atoi(argv[3]);
+			
+			start_strc = atoi(argv[4]);
+			stop_strc = atoi(argv[5]);
+			start_load = atoi(argv[6]);
+			stop_load = atoi(argv[7]);
+			
+			//iret1 = pthread_create(&thread1, NULL, method, (void*) message1);
+			method();
+		}
 		return 0;
 }
 

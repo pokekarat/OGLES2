@@ -1,37 +1,5 @@
-/******************************************************************************
-
- @File         OGLES2PVRScopeExample.cpp
-
- @Title        Iridescence
-
- @Version      
-
- @Copyright    Copyright (c) Imagination Technologies Limited.
-
- @Platform     Independent
-
- @Description  Shows how to use our example PVRScope graph code.
-
-******************************************************************************/
-//#include "PVRShell.h"
-//#include "OGLES2Tools.h"
 #include "PVRScopeGraph.h"
 #include <pthread.h>
-/*********************************************************************************************
-*
-* This example outputs the values of the hardware counters found in Group 0
-* to Android Logcat once a second for 60 seconds, and consists of five steps:
-*
-* 1. Define a function to initialise PVRScopeStats
-* 2. Initialise PVRScopeStats
-* 3. Set the active group to 0
-* 4. Read and output the counter information for group 0 to Logcat
-* 5. Shutdown PVRScopeStats
-*
-*********************************************************************************************/
-
-//#define NUMBER_OF_LOOPS 140
-
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
